@@ -1,0 +1,16 @@
+{
+  "name": "telegram_images",
+  "version": "1.0.0",
+  "description": "Little bot to save all new files in chat to private server for further use",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node ."
+  },
+  "author": "Matias Turunen",
+  "license": "ISC",
+  "dependencies": {
+    "image-downloader": "^3.5.0",
+    "telegraf": "^3.36.0"
+  }
+}
