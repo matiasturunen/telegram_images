@@ -12,4 +12,3 @@ Download images from telegram chats
  - save text with the photo
  - save text individually (or not)
  - cleanup unnecessary output
- - save images with their telegram unique name
