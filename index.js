@@ -14,7 +14,20 @@ bot.start((ctx) => ctx.reply('Welcome, friend'));
 bot.on('message', (ctx, next) => {
 const messagePromisesToFIll = [];
 	if (ctx.update.message) {
-		console.log(ctx.update.message);
+		//console.log(ctx.update.message); // Log full message and all of it's info
+
+
+		// Log user and chat info
+		console.log('From:', ctx.update.message.from.first_name, ctx.update.message.from.last_name);
+		if (ctx.update.message.chat.type == 'group') {
+			console.log('Chat:', ctx.update.message.chat.title);
+		} else if (ctx.update.message.chat.type == 'private') {
+			console.log('Chat: Private');
+		} else {
+			console.log('Chat: Unknown chat');
+		}
+		console.log('Date:', ctx.update.message.date);
+
 		if (ctx.update.message.text) {
 
 			// Put something to promises array
@@ -29,6 +42,7 @@ const messagePromisesToFIll = [];
 			messagePromisesToFIll.push( getLargestPhoto(ctx.update.message.photo, true)
 			.then(p => telegram.getFile(p))
 			.then(file => {
+
 				console.log('FILE:', file);
 				console.log('Downloading file...');
 
@@ -53,7 +67,6 @@ const messagePromisesToFIll = [];
 	}
 	Promise.all(messagePromisesToFIll).then(() => {
 		console.log(""); // Empty space between messages
-		console.log('NEXT!');
 		next();
 	})
 })
@@ -64,7 +77,7 @@ bot.entity('bot_command', (ctx, next) => {
 });
 bot.help(ctx => ctx.reply('I can\'t help you.'));
 bot.launch()
-console.log('START!!')
+console.log('Imagetty has started succesfully!')
 
 // Get largest photo from list. If dimensions=true, compares dimensions and total pixel area. If false, compares by file size
 function getLargestPhoto(photos, dimensions=true) {
