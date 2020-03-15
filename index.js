@@ -9,21 +9,25 @@ const telegram = new Telegram(process.env.BOT_TOKEN, {
 })
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
-bot.start((ctx) => {
-	ctx.reply('Welcome, friend');
-	console.log('command: /start')
-});
-bot.on('message', (ctx) => {
+bot.start((ctx) => ctx.reply('Welcome, friend'));
+
+bot.on('message', (ctx, next) => {
+const messagePromisesToFIll = [];
 	if (ctx.update.message) {
 		console.log(ctx.update.message);
 		if (ctx.update.message.text) {
-			console.log('TEXT:', ctx.update.message.text)
-		}
-		if (ctx.update.message.photo) {
-			console.log('PHOTO INFO:', ctx.update.message.photo);
 
-			let p = getLargestPhoto(ctx.update.message.photo, true);
-			telegram.getFile(p)
+			// Put something to promises array
+			messagePromisesToFIll.push(new Promise((resolve, reject) => {
+				console.log('TEXT:', ctx.update.message.text);
+				resolve();
+			}));
+		}
+
+		if (ctx.update.message.photo) {
+
+			messagePromisesToFIll.push( getLargestPhoto(ctx.update.message.photo, true)
+			.then(p => telegram.getFile(p))
 			.then(file => {
 				console.log('FILE:', file);
 				console.log('Downloading file...');
@@ -35,24 +39,30 @@ bot.on('message', (ctx) => {
 					dest: path.join(__dirname, 'photos', file.file_unique_id + '.' + end) // Save with unique name
 				}
 
-				download.image(imageoptions)
-				  .then(({ filename, image }) => {
-				    console.log('Saved to', filename)  // Saved to /path/to/dest/image.jpg
-				  })
-				  .catch((err) => console.error(err))
-			})
-			.catch(err => console.error(err))
+				return download.image(imageoptions)
+				  .then(({ filename, image }) => console.log('Saved to', filename));
+			}))
 		}
+
 		if (ctx.update.message.caption) {
-			console.log('CAPTION:', ctx.update.message.caption);
+			messagePromisesToFIll.push(new Promise((resolve, reject) => {
+				console.log('CAPTION:', ctx.update.message.caption);
+				resolve();
+			}));
 		}
 	}
-	console.log("");
+	Promise.all(messagePromisesToFIll).then(() => {
+		console.log(""); // Empty space between messages
+		console.log('NEXT!');
+		next();
+	})
 })
-bot.command('komento', (ctx) => {
-	console.log('GOT A COMMAND!!');
-	ctx.reply('I don\'t accept commands');
-})
+bot.entity('bot_command', (ctx, next) => {
+	//console.log('GOT A COMMAND!! It is "' + ctx.update.message.text + '"' );
+	ctx.reply('I don\'t accept commands.')
+	.then(next());
+});
+bot.help(ctx => ctx.reply('I can\'t help you.'));
 bot.launch()
 console.log('START!!')
 
@@ -75,5 +85,5 @@ function getLargestPhoto(photos, dimensions=true) {
 		}
 	});
 
-	return selected;
+	return Promise.resolve(selected);
 }
