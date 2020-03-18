@@ -1,5 +1,5 @@
 {
-  "name": "telegram_images",
+  "name": "imagetty",
   "version": "1.0.0",
   "description": "Little bot to save all new files in chat to private server for further use",
   "main": "index.js",
@@ -10,7 +10,9 @@
   "author": "Matias Turunen",
   "license": "ISC",
   "dependencies": {
+    "googleapis": "^39.2.0",
     "image-downloader": "^3.5.0",
+    "pg-promise": "^10.4.4",
     "telegraf": "^3.36.0"
   }
 }

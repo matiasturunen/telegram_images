@@ -2,17 +2,42 @@ const Telegraf = require('telegraf')
 const Telegram = require('telegraf/telegram')
 const download = require('image-downloader')
 const path = require('path')
+const fs = require('fs');
+const { google } = require('googleapis');
 
-const telegram = new Telegram(process.env.BOT_TOKEN, {
+const config = {
+	token: process.env.BOT_TOKEN,
+	drive_client_email: process.env.DRIVE_CLIENT_EMAIL,
+	drive_private_key: process.env.DRIVE_PRIVATE_KEY.replace(new RegExp("\\\\n", "\g"), "\n"), // Fix key with regexp
+	drive_folder: process.env.DRIVE_FOLDER,
+};
+
+const telegram = new Telegram(config.token, {
   agent: null,        // https.Agent instance, allows custom proxy, certificate, keep alive, etc.
   webhookReply: true  // Reply via webhook
-})
+});
 
-const bot = new Telegraf(process.env.BOT_TOKEN)
+const scopes = [
+  'https://www.googleapis.com/auth/drive'
+];
+
+const auth = new google.auth.JWT(
+  config.drive_client_email,
+  null,
+  config.drive_private_key,
+  scopes
+);
+
+const drive = google.drive({
+	version: 'v3',
+	auth,
+});
+
+const bot = new Telegraf(config.token)
 bot.start((ctx) => ctx.reply('Welcome, friend'));
 
 bot.on('message', (ctx, next) => {
-const messagePromisesToFIll = [];
+	const messagePromisesToFIll = [];
 	if (ctx.update.message) {
 		//console.log(ctx.update.message); // Log full message and all of it's info
 
@@ -61,13 +86,15 @@ const messagePromisesToFIll = [];
 	Promise.all(messagePromisesToFIll).then(() => {
 		console.log(""); // Empty space between messages
 		next();
-	})
+	}).catch(err => console.error(err));
 })
+
 bot.entity('bot_command', (ctx, next) => {
 	//console.log('GOT A COMMAND!! It is "' + ctx.update.message.text + '"' );
 	ctx.reply('I don\'t accept commands.')
 	.then(next());
 });
+
 bot.help(ctx => ctx.reply('I can\'t help you.'));
 bot.launch()
 console.log('Imagetty has started succesfully!')
@@ -84,7 +111,7 @@ function getLargestPhoto(photos, dimensions=true) {
 				selected = photo.file_id;
 			}
 		} else {
-			if (photo.size > largest) {
+			if (photo.size > largest) {	
 				largest = photo.size;
 				selected = photo.file_id;
 			}
@@ -97,10 +124,11 @@ function getLargestPhoto(photos, dimensions=true) {
 function downloadFile(file) {
 	console.log('Downloading file...')
 	const end = file.file_path.split('.')[1]; // Just assuming that all photos have file end tag...
+	const shortname = file.file_unique_id + '.' + end;
 
 	const fileoptions = {
 		url: `https://api.telegram.org/file/bot${ process.env.BOT_TOKEN }/${ file.file_path }`,
-		dest: path.join(__dirname, 'photos', file.file_unique_id + '.' + end) // Save with unique name
+		dest: path.join(__dirname, 'photos', shortname) // Save with unique name
 	}
 
 	return download.image(fileoptions)
@@ -110,6 +138,22 @@ function downloadFile(file) {
 	  	/* 
 	  	 * HERE YOU CAN SAVE THE IMAGE TO ANYWHERE YOU WANT
 	  	 */
-	  	return Promise.resolve();
+	  	return uploadFile(filename, shortname)
+	  		.then(() => console.log('File uploaded succesfully to drive.'))
+	  		.then(() => fs.unlinkSync(filename))
 	  });
+}
+
+async function uploadFile(fullpath, shortname) {
+  const res = await drive.files.create({
+    requestBody: {
+    	parents: [config.drive_folder],
+    	name: shortname,
+    },
+    media: {
+      body: fs.createReadStream(fullpath),
+    },
+   });
+  console.log(res.data);
+  return res;
 }
